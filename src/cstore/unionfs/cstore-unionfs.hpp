@@ -64,6 +64,7 @@ private:
   // constants
   static const string C_ENV_TMPL_ROOT;
   static const string C_ENV_WORK_ROOT;
+  static const string C_ENV_OWORK_ROOT;
   static const string C_ENV_ACTIVE_ROOT;
   static const string C_ENV_CHANGE_ROOT;
   static const string C_ENV_TMP_ROOT;
@@ -72,6 +73,7 @@ private:
   static const string C_DEF_CFG_ROOT;
   static const string C_DEF_ACTIVE_ROOT;
   static const string C_DEF_CHANGE_PREFIX;
+  static const string C_DEF_OWORK_PREFIX;
   static const string C_DEF_WORK_PREFIX;
   static const string C_DEF_TMP_PREFIX;
 
@@ -96,6 +98,7 @@ private:
   FsPath work_root;   // working root (union)
   FsPath active_root; // active root (readonly part of union)
   FsPath change_root; // change root (r/w part of union)
+  FsPath owork_root;  // work root (work part of union)
   FsPath tmp_root;    // temp root
   FsPath tmpl_root;   // template root
 
@@ -264,6 +267,7 @@ private:
   FsPath get_work_path() { return (work_root / mutable_cfg_path); };
   FsPath get_active_path() { return (active_root / mutable_cfg_path); };
   FsPath get_change_path() { return (change_root / mutable_cfg_path); };
+  FsPath get_owork_path() { return (owork_root / mutable_cfg_path); };
   void push_path(FsPath& old_path, const char *new_comp);
   void pop_path(FsPath& path);
   void pop_path(FsPath& path, string& last);
@@ -292,7 +296,7 @@ private:
                           bool filter_dot_entries = false);
   void get_committed_marker(bool is_delete, string& marker);
   bool find_line_in_file(const FsPath& file, const string& line);
-  bool do_mount(const FsPath& rwdir, const FsPath& rdir, const FsPath& mdir);
+  bool do_mount(const FsPath& rwdir, const FsPath& rdir, const FsPath& wdir, const FsPath& mdir);
   bool do_umount(const FsPath& mdir);
 
   // boost fs operations wrappers

@@ -12,6 +12,7 @@ extern "C" {
 #define ENV_TEMPLATE_LEVEL "VYATTA_TEMPLATE_LEVEL"
 #define ENV_A_DIR "VYATTA_ACTIVE_CONFIGURATION_DIR"
 #define ENV_C_DIR "VYATTA_CHANGES_ONLY_DIR"
+#define ENV_W_DIR "VYATTA_WORK_ONLY_DIR"
 #define ENV_M_DIR "VYATTA_TEMP_CONFIG_DIR"
 #define ENV_T_DIR "VYATTA_CONFIG_TEMPLATE"
 #define ENV_TMP_DIR "VYATTA_CONFIG_TMP"
@@ -32,11 +33,13 @@ valstruct* get_cli_value_ptr(void);
 
 first_seg* get_f_seg_a_ptr(void);
 first_seg* get_f_seg_c_ptr(void);
+first_seg* get_f_seg_w_ptr(void);
 first_seg* get_f_seg_m_ptr(void);
 
 const char* get_tdirp(void);
 const char* get_cdirp(void);
 const char* get_adirp(void);
+const char* get_wdirp(void);
 const char* get_mdirp(void);
 const char* get_tmpp(void);
 

@@ -28,6 +28,7 @@ static boolean in_commit=FALSE; /* TRUE if in commit program*/
 static boolean in_exec=FALSE; /* TRUE if in exec */
 static first_seg f_seg_a;
 static first_seg f_seg_c;
+static first_seg f_seg_w;
 static first_seg f_seg_m;
 
 /******************** Accessors: ************************/
@@ -95,6 +96,10 @@ first_seg* get_f_seg_c_ptr(void) {
   return &f_seg_c;
 }
 
+first_seg* get_f_seg_w_ptr(void) {
+  return &f_seg_w;
+}
+
 first_seg* get_f_seg_m_ptr(void) {
   return &f_seg_m;
 }
@@ -113,6 +118,10 @@ const char* get_tdirp(void) {
 
 const char* get_cdirp(void) {
   return getenv(ENV_C_DIR);
+}
+
+const char* get_wdirp(void) {
+  return getenv(ENV_W_DIR);
 }
 
 const char* get_adirp(void) {
@@ -195,6 +204,7 @@ void init_paths(boolean for_commit)
   struct stat    statbuf;
   const char* tdirp = get_tdirp();
   const char* cdirp = get_cdirp();
+  const char* wdirp = get_wdirp();
   const char* adirp = get_adirp();
   const char* mdirp = get_mdirp();
   const char* tmpp = get_tmpp();
@@ -204,6 +214,9 @@ void init_paths(boolean for_commit)
   if (!cdirp)
     bye("INTERNAL: environment var |%s|  is not set",
 	ENV_C_DIR);
+  if (!wdirp)
+    bye("INTERNAL: environment var |%s|  is not set",
+	ENV_W_DIR);
   if (!tmpp || !tmpp[0])
     bye("INTERNAL: environment var |%s|  is not set",
 	ENV_TMP_DIR);
@@ -226,6 +239,7 @@ void init_paths(boolean for_commit)
 
     get_f_seg_a_ptr()->f_segp = adirp;
     get_f_seg_c_ptr()->f_segp = cdirp;
+    get_f_seg_w_ptr()->f_segp = wdirp;
     get_f_seg_m_ptr()->f_segp = mdirp;
     get_f_seg_a_ptr()->f_seglen = strlen(adirp);
     get_f_seg_c_ptr()->f_seglen = strlen(cdirp);
@@ -241,8 +255,13 @@ void init_paths(boolean for_commit)
       max_len = get_f_seg_c_ptr()->f_seglen;
       startp = cdirp;
     }      
+    if(get_f_seg_w_ptr()->f_seglen > max_len) {
+      max_len = get_f_seg_w_ptr()->f_seglen;
+      startp = wdirp;
+    }      
     get_f_seg_a_ptr()->f_segoff = max_len - get_f_seg_a_ptr()->f_seglen;
     get_f_seg_c_ptr()->f_segoff = max_len - get_f_seg_c_ptr()->f_seglen;
+    get_f_seg_w_ptr()->f_segoff = max_len - get_f_seg_w_ptr()->f_seglen;
     get_f_seg_m_ptr()->f_segoff = max_len - get_f_seg_m_ptr()->f_seglen;
     init_path(&m_path, startp);
     switch_path(get_f_seg_c_ptr());

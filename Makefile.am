@@ -9,12 +9,16 @@ etc_shell_leveldir = $(sysconfdir)/shell/level
 dhcphookdir = /etc/dhcp/dhclient-exit-hooks.d
 enumdir = $(datadir)/enumeration
 
-if USE_UNIONFSFUSE
-USE_UNIONFSFUSE = -DUSE_UNIONFSFUSE=1
+if USE_OVERLAYFS
+USE_OVERLAYFS = -DUSE_OVERLAYFS=1
 endif
 
-AM_CFLAGS = -I src -Wall $(GOBJECT_CFLAGS)
-AM_CXXFLAGS = -I src -Wall -Werror $(USE_UNIONFSFUSE)
+if USE_UNIONFSFUSE
+USE_OVERLAYFS = -DUSE_UNIONFSFUSE=1
+endif
+
+AM_CFLAGS = -I src -Wall $(GOBJECT_CFLAGS) $(USE_OVERLAYFS)
+AM_CXXFLAGS = -I src -Wall -Werror $(USE_OVERLAYFS)
 AM_CXXFLAGS += $(GOBJECT_CFLAGS)
 AM_YFLAGS = -d --name-prefix=yy_`basename $* .y`_
 AM_LFLAGS = --prefix=yy_`basename $* .l`_ -olex.yy.c

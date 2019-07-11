@@ -44,6 +44,7 @@ const string UnionfsCstore::C_ENV_TMPL_ROOT = "VYATTA_CONFIG_TEMPLATE";
 const string UnionfsCstore::C_ENV_WORK_ROOT = "VYATTA_TEMP_CONFIG_DIR";
 const string UnionfsCstore::C_ENV_ACTIVE_ROOT
   = "VYATTA_ACTIVE_CONFIGURATION_DIR";
+const string UnionfsCstore::C_ENV_OWORK_ROOT = "VYATTA_WORK_ONLY_DIR";
 const string UnionfsCstore::C_ENV_CHANGE_ROOT = "VYATTA_CHANGES_ONLY_DIR";
 const string UnionfsCstore::C_ENV_TMP_ROOT = "VYATTA_CONFIG_TMP";
 
@@ -56,6 +57,8 @@ const string UnionfsCstore::C_DEF_ACTIVE_ROOT
   = UnionfsCstore::C_DEF_CFG_ROOT + "/active";
 const string UnionfsCstore::C_DEF_CHANGE_PREFIX 
   = UnionfsCstore::C_DEF_CFG_ROOT + "/tmp/changes_only_";
+const string UnionfsCstore::C_DEF_OWORK_PREFIX 
+  = UnionfsCstore::C_DEF_CFG_ROOT + "/tmp/work_only_";
 const string UnionfsCstore::C_DEF_WORK_PREFIX
   = UnionfsCstore::C_DEF_CFG_ROOT + "/tmp/new_config_";
 const string UnionfsCstore::C_DEF_TMP_PREFIX
@@ -242,6 +245,9 @@ UnionfsCstore::UnionfsCstore(bool use_edit_level)
   if ((val = getenv(C_ENV_CHANGE_ROOT.c_str()))) {
     change_root = val;
   }
+  if ((val = getenv(C_ENV_OWORK_ROOT.c_str()))) {
+    change_root = val;
+  }
   /* note: the original perl API module does not use the edit levels
    *       from environment. only the actual CLI operations use them.
    *       so here make it an option.
@@ -290,6 +296,7 @@ UnionfsCstore::UnionfsCstore(const string& sid, string& env)
   active_root = C_DEF_ACTIVE_ROOT;
   work_root = (C_DEF_WORK_PREFIX + sid);
   change_root = (C_DEF_CHANGE_PREFIX + sid);
+  owork_root = (C_DEF_OWORK_PREFIX + sid);
   tmp_root = (C_DEF_TMP_PREFIX + sid);
   init_commit_data();
 
@@ -297,6 +304,7 @@ UnionfsCstore::UnionfsCstore(const string& sid, string& env)
   env += " umask 002; {";
   env += (declr + C_ENV_ACTIVE_ROOT + "=" + active_root.path_cstr());
   env += (declr + C_ENV_CHANGE_ROOT + "=" + change_root.path_cstr() + ";");
+  env += (declr + C_ENV_OWORK_ROOT + "=" + owork_root.path_cstr() + ";");
   env += (declr + C_ENV_WORK_ROOT + "=" + work_root.path_cstr() + ";");
   env += (declr + C_ENV_TMP_ROOT + "=" + tmp_root.path_cstr() + ";");
   env += (declr + C_ENV_TMPL_ROOT + "=" + tmpl_root.path_cstr() + ";");
@@ -409,6 +417,7 @@ UnionfsCstore::setupSession()
     try {
       b_fs::create_directories(work_root.path_cstr());
       b_fs::create_directories(change_root.path_cstr());
+      b_fs::create_directories(owork_root.path_cstr());
       b_fs::create_directories(tmp_root.path_cstr());
       if (!path_exists(active_root)) {
         // this should only be needed on boot
@@ -420,7 +429,7 @@ UnionfsCstore::setupSession()
     }
 
     // union mount
-    if (!do_mount(change_root, active_root, work_root)) {
+    if (!do_mount(change_root, active_root, owork_root, work_root)) {
       return false;
     }
   } else if (!path_is_directory(work_root)) {
@@ -522,6 +531,7 @@ UnionfsCstore::teardownSession()
   try {
     if (b_fs::remove_all(work_root.path_cstr()) != 0
         && b_fs::remove_all(change_root.path_cstr()) != 0
+        && b_fs::remove_all(owork_root.path_cstr()) != 0
         && b_fs::remove_all(tmp_root.path_cstr()) != 0) {
       ret = true;
     }
@@ -807,6 +817,10 @@ UnionfsCstore::commitConfig(commit::PrioNode& node)
     output_internal("failed to remove [%s]\n", change_root.path_cstr());
     return false;
   }
+  if (b_fs::remove_all(owork_root.path_cstr()) < 1) {
+    output_internal("failed to remove [%s]\n", owork_root.path_cstr());
+    return false;
+  }
   /* note: unionfs can't cope with whole directory being removed, so just
    * remove the content.
    */
@@ -825,7 +839,7 @@ UnionfsCstore::commitConfig(commit::PrioNode& node)
     output_internal("cp ta->a failed[unknown exception]\n");
     return false;
   }
-  if (!do_mount(change_root, active_root, work_root)) {
+  if (!do_mount(change_root, active_root, owork_root, work_root)) {
     return false;
   }
   if (!sync_dir(tmp_work_root, work_root, work_root)) {
@@ -1627,7 +1641,7 @@ UnionfsCstore::find_line_in_file(const FsPath& file, const string& line)
 
 bool
 UnionfsCstore::do_mount(const FsPath& rwdir, const FsPath& rdir,
-                        const FsPath& mdir)
+                        const FsPath& wdir, const FsPath& mdir)
 {
 #ifdef USE_UNIONFSFUSE
   const char *fusepath, *fuseprog;
@@ -1669,6 +1683,22 @@ UnionfsCstore::do_mount(const FsPath& rwdir, const FsPath& rdir,
                    strerror(errno), mdir.path_cstr(), mopts.c_str());
         return false;
     }
+  }
+#elif defined(USE_OVERLAYFS)
+  const char *fstype;
+  string mopts;
+
+  fstype = "overlayfs";
+  mopts = "upperdir=";
+  mopts += rwdir.path_cstr();
+  mopts += ",lowerdir=";
+  mopts += rdir.path_cstr();
+  mopts += ",workdir=";
+  mopts += wdir.path_cstr();
+  if (mount(fstype, mdir.path_cstr(), fstype, 0, mopts.c_str()) != 0) {
+    output_internal("union mount failed [%s][%s][%s]\n",
+                    strerror(errno), mdir.path_cstr(), mopts.c_str());
+    return false;
   }
 #else
   string mopts = "dirs=";

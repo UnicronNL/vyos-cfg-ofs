@@ -38,6 +38,12 @@ AC_ARG_ENABLE([unionfsfuse],
 	[enable_unionfsfuse=yes], [enable_unionfsfuse=no])
 AM_CONDITIONAL([USE_UNIONFSFUSE], [test "$enable_unionfsfuse" != no])
 
+AC_ARG_ENABLE([overlayfs],
+	AC_HELP_STRING([--enable-overlayfs],
+	[use overlayfs instead of unionfs (default is no)]),
+	[enable_overlayfs=yes], [enable_overlayfs=no])
+AM_CONDITIONAL([USE_OVERLAYFS], [test "$enable_overlayfs" != no])
+
 AC_CONFIG_FILES(
 	[Makefile]
 	[perl_dmod/Makefile]

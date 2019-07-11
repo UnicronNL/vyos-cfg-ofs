@@ -145,6 +145,13 @@ sys_mount_session(void)
       perror("execl");
     }
   }
+#elif defined(USE_OVERLAYFS)
+  char mopts[MAX_LENGTH_DIR_PATH * 3];
+  snprintf(mopts, MAX_LENGTH_DIR_PATH * 3, "upperdir=%s,lowerdir=%s,workdir=%s",
+           get_cdirp(), get_adirp(), get_wdirp());
+  if (mount("overlayfs", get_mdirp(), "overlayfs", 0, mopts) != 0) {
+    perror("mount");
+  }
 #else
   char mopts[MAX_LENGTH_DIR_PATH * 2];
   snprintf(mopts, MAX_LENGTH_DIR_PATH * 2, "dirs=%s=rw:%s=ro",
